@@ -2,18 +2,17 @@
 // SMART SECURITY LOCK: Allow Iframe OR Library Referrer
 // ---------------------------------------------------------
 try {
-    // 1. CONFIGURATION: Part of your LibGuide URL
-    // If your guides are at "guides.library.edu", use "library.edu"
-    const LIBRARY_KEYWORD = "libguides"; 
-    // You can also add your proxy domain here if needed, e.g. "oclc.org"
+    // 1. CONFIGURATION: Your authorized domains
+    // We allow your main domain AND your proxy domain
+    const KEYWORD_1 = "thedtl.org"; 
+    const KEYWORD_2 = "oclc.org";
 
-    // 2. Check: Is it inside an iframe? (Always allow iframes)
+    // 2. Check: Is it inside an iframe? (Always allow embedding)
     const isEmbedded = window.self !== window.top;
 
     // 3. Check: Did the user come from the library website?
-    // We check if the "Referrer" (previous page) contains your keyword.
     const referrer = document.referrer ? document.referrer.toLowerCase() : "";
-    const isFromLibrary = referrer.includes(LIBRARY_KEYWORD);
+    const isFromLibrary = referrer.includes(KEYWORD_1) || referrer.includes(KEYWORD_2);
 
     // 4. The Decision:
     // If it is NOT embedded AND it did NOT come from the library... BLOCK IT.
