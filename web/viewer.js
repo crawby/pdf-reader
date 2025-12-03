@@ -1,20 +1,32 @@
 // ---------------------------------------------------------
-// DIAGNOSTIC MODE (Delete this after testing)
+// SECURITY LOCK
 // ---------------------------------------------------------
 (function() {
-    const referrer = document.referrer ? document.referrer.toLowerCase() : "EMPTY";
-    const isEmbedded = window.self !== window.top;
-    
-    // Check if it matches your keywords
-    const KEYWORD_1 = "thedtl.org";
-    const KEYWORD_2 = "oclc.org";
-    const KEYWORD_3 = "libapps.com"; // Added this for Admin Preview mode
-    
-    const isMatch = referrer.includes(KEYWORD_1) || referrer.includes(KEYWORD_2) || referrer.includes(KEYWORD_3);
+    try {
+        // 1. CONFIGURATION: Authorized Domains
+        const KEYWORD_1 = "thedtl.org";     // Public LibGuides
+        const KEYWORD_2 = "oclc.org";       // EZproxy
+        const KEYWORD_3 = "libapps.com";    // Admin/Preview Mode
 
-    if (!isEmbedded && !isMatch) {
-        // Don't block yet, just tell us what is wrong
-        alert("DIAGNOSTIC: I would have blocked this!\n\nYour Referrer is: " + referrer);
+        // 2. CHECKS
+        const isEmbedded = window.self !== window.top;
+        const referrer = document.referrer ? document.referrer.toLowerCase() : "";
+        
+        // Check if the referrer matches ANY of our keywords
+        const isFromLibrary = referrer.includes(KEYWORD_1) || 
+                              referrer.includes(KEYWORD_2) || 
+                              referrer.includes(KEYWORD_3);
+
+        // 3. BLOCKING LOGIC
+        if (!isEmbedded && !isFromLibrary) {
+            // Nuke the page content immediately
+            document.write('<div style="font-family:sans-serif;text-align:center;margin-top:50px;color:#d9534f;"><h1>Access Denied</h1><p>This document must be accessed via the Library website.</p><p style="color:#666;font-size:12px;">(Referrer: ' + (referrer || 'Hidden') + ')</p></div>');
+            document.close(); 
+            window.stop();    
+            throw new Error("Access Denied"); 
+        }
+    } catch (e) {
+        if (e.message === "Access Denied") throw e;
     }
 })();
 // ---------------------------------------------------------
