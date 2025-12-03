@@ -1,22 +1,35 @@
 // ---------------------------------------------------------
-// SECURITY LOCK: Only allow access inside an iframe (LibGuides)
+// SMART SECURITY LOCK: Allow Iframe OR Library Referrer
 // ---------------------------------------------------------
 try {
-    if (window.self === window.top) {
-        // The user tried to open this in a new tab (Direct Access)
+    // 1. CONFIGURATION: Part of your LibGuide URL
+    // If your guides are at "guides.library.edu", use "library.edu"
+    const LIBRARY_KEYWORD = "libguides"; 
+    // You can also add your proxy domain here if needed, e.g. "oclc.org"
+
+    // 2. Check: Is it inside an iframe? (Always allow iframes)
+    const isEmbedded = window.self !== window.top;
+
+    // 3. Check: Did the user come from the library website?
+    // We check if the "Referrer" (previous page) contains your keyword.
+    const referrer = document.referrer ? document.referrer.toLowerCase() : "";
+    const isFromLibrary = referrer.includes(LIBRARY_KEYWORD);
+
+    // 4. The Decision:
+    // If it is NOT embedded AND it did NOT come from the library... BLOCK IT.
+    if (!isEmbedded && !isFromLibrary) {
         document.body.innerHTML = `
             <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#f0f0f0;font-family:sans-serif;text-align:center;">
                 <div>
                     <h1>Access Denied</h1>
-                    <p>This document can only be viewed through the Library website.</p>
+                    <p>This document must be accessed via the Library website.</p>
                 </div>
             </div>
         `;
-        // Stop the rest of the viewer from loading
-        throw new Error("Direct access blocked. Viewer must be embedded.");
+        // Stop the viewer
+        throw new Error("Direct access blocked. Invalid Referrer.");
     }
 } catch (e) {
-    // Kill the script
     window.stop();
     throw e;
 }
