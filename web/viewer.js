@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// SMART SECURITY LOCK: Allow Iframe OR Library Referrer
+// SECURITY LOCK: Allow Iframe OR Library Referrer
 // ---------------------------------------------------------
 try {
     const KEYWORD_1 = "thedtl.org"; 
@@ -10,35 +10,22 @@ try {
     const isFromLibrary = referrer.includes(KEYWORD_1) || referrer.includes(KEYWORD_2);
 
     if (!isEmbedded && !isFromLibrary) {
-        // Define the error message
-        const showBlockMessage = () => {
-            document.body.innerHTML = `
-                <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#f0f0f0;font-family:sans-serif;text-align:center;">
-                    <div>
-                        <h1 style="color:#d9534f;">Access Denied</h1>
-                        <p>This document must be accessed via the Library website.</p>
-                        <p style="font-size:0.8em;color:#666;">(Error: Missing Referrer)</p>
-                    </div>
-                </div>
-            `;
-        };
-
-        // If the body exists, show immediately. If not, wait for it.
-        if (document.body) {
-            showBlockMessage();
-        } else {
-            window.addEventListener('DOMContentLoaded', showBlockMessage);
-        }
-
-        // Stop the rest of the viewer from loading
-        throw new Error("Direct access blocked. Invalid Referrer.");
+        // NUKE THE PAGE IMMEDIATELY
+        // We write to documentElement (the <HTML> tag) because <body> might not exist yet.
+        document.documentElement.innerHTML = `
+            <body style="background:#f0f0f0;font-family:sans-serif;text-align:center;padding-top:50px;">
+                <h1 style="color:#d9534f;">Access Denied</h1>
+                <p>This document must be accessed via the Library website.</p>
+                <p style="color:#666;font-size:12px;">(Referrer: ${referrer || 'Hidden'})</p>
+            </body>
+        `;
+        // Stop the browser from processing the rest of the file
+        throw new Error("Access Denied");
     }
 } catch (e) {
-    // If it wasn't our error, re-throw it, otherwise stop execution
-    if (e.message !== "Direct access blocked. Invalid Referrer.") {
-        // Allow other errors to pass (like the nuclear fix below)
-    } else {
-        throw e;
+    if (e.message === "Access Denied") {
+        window.stop(); // Stop loading the PDF
+        throw e;       // Stop the script
     }
 }
 // ---------------------------------------------------------
