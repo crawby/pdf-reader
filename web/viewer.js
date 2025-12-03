@@ -1,33 +1,22 @@
 // ---------------------------------------------------------
-// SECURITY LOCK: Allow Iframe OR Library Referrer
+// DIAGNOSTIC MODE (Delete this after testing)
 // ---------------------------------------------------------
-try {
-    const KEYWORD_1 = "thedtl.org"; 
-    const KEYWORD_2 = "oclc.org";
-
+(function() {
+    const referrer = document.referrer ? document.referrer.toLowerCase() : "EMPTY";
     const isEmbedded = window.self !== window.top;
-    const referrer = document.referrer ? document.referrer.toLowerCase() : "";
-    const isFromLibrary = referrer.includes(KEYWORD_1) || referrer.includes(KEYWORD_2);
+    
+    // Check if it matches your keywords
+    const KEYWORD_1 = "thedtl.org";
+    const KEYWORD_2 = "oclc.org";
+    const KEYWORD_3 = "libapps.com"; // Added this for Admin Preview mode
+    
+    const isMatch = referrer.includes(KEYWORD_1) || referrer.includes(KEYWORD_2) || referrer.includes(KEYWORD_3);
 
-    if (!isEmbedded && !isFromLibrary) {
-        // NUKE THE PAGE IMMEDIATELY
-        // We write to documentElement (the <HTML> tag) because <body> might not exist yet.
-        document.documentElement.innerHTML = `
-            <body style="background:#f0f0f0;font-family:sans-serif;text-align:center;padding-top:50px;">
-                <h1 style="color:#d9534f;">Access Denied</h1>
-                <p>This document must be accessed via the Library website.</p>
-                <p style="color:#666;font-size:12px;">(Referrer: ${referrer || 'Hidden'})</p>
-            </body>
-        `;
-        // Stop the browser from processing the rest of the file
-        throw new Error("Access Denied");
+    if (!isEmbedded && !isMatch) {
+        // Don't block yet, just tell us what is wrong
+        alert("DIAGNOSTIC: I would have blocked this!\n\nYour Referrer is: " + referrer);
     }
-} catch (e) {
-    if (e.message === "Access Denied") {
-        window.stop(); // Stop loading the PDF
-        throw e;       // Stop the script
-    }
-}
+})();
 // ---------------------------------------------------------
 
 /**
