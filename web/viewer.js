@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// SECURITY PATCH: Inject Real Referrer (With Kill Switch)
+// SECURITY PATCH: Inject Real Referrer (Robust Version)
 // ---------------------------------------------------------
 (function() {
     try {
@@ -9,10 +9,23 @@
         // Check if we are using the worker AND if we are missing the 'ref' tag
         if (fileParam && fileParam.includes("workers.dev") && !fileParam.includes("&ref=")) {
             
-            // 1. Determine Real Referrer
-            let ref = document.referrer;
-            if (!ref) ref = "direct";
-            try { ref = new URL(ref).hostname; } catch(e) { ref = "direct"; }
+            let ref = "";
+
+            // A. Try standard Referrer
+            if (document.referrer) {
+                ref = document.referrer;
+            } 
+            // B. Try Ancestor Origins (Chrome/Safari fallback for iframes)
+            else if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+                ref = window.location.ancestorOrigins[window.location.ancestorOrigins.length - 1];
+            }
+
+            // C. Clean up the domain
+            if (ref) {
+                try { ref = new URL(ref).hostname; } catch(e) { ref = "direct"; }
+            } else {
+                ref = "direct";
+            }
 
             // 2. Append ref to the inner worker URL
             const newFileParam = fileParam + "&ref=" + ref;
@@ -24,17 +37,13 @@
             // 4. FORCE RELOAD
             window.location.replace(newUrl);
             
-            // 5. KILL SWITCH (The Fix)
-            // We intentionally throw an error to STOP the rest of this file from running.
-            // This prevents PDF.js from trying to load the old URL while the page is reloading.
+            // 5. KILL SWITCH
             throw new Error("Security Redirect: Reloading with ID card...");
         }
     } catch (e) { 
-        // Ignore our intentional kill switch error, log others
         if (e.message !== "Security Redirect: Reloading with ID card...") {
             console.error("Security Patch Error", e);
         } else {
-            // Re-throw to ensure execution stops
             throw e;
         }
     }
