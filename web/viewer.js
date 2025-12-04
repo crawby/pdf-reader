@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// SECURITY PATCH: Inject Real Referrer (Reload Method)
+// SECURITY PATCH: Inject Real Referrer (With Kill Switch)
 // ---------------------------------------------------------
 (function() {
     try {
@@ -15,18 +15,29 @@
             try { ref = new URL(ref).hostname; } catch(e) { ref = "direct"; }
 
             // 2. Append ref to the inner worker URL
-            // We append it manually to ensure it sticks
             const newFileParam = fileParam + "&ref=" + ref;
 
             // 3. Update the main URL parameter
             urlParams.set('file', newFileParam);
             const newUrl = window.location.pathname + '?' + urlParams.toString() + window.location.hash;
 
-            // 4. FORCE RELOAD with the new URL
-            // This ensures PDF.js reads the correct URL with the ID card attached
+            // 4. FORCE RELOAD
             window.location.replace(newUrl);
+            
+            // 5. KILL SWITCH (The Fix)
+            // We intentionally throw an error to STOP the rest of this file from running.
+            // This prevents PDF.js from trying to load the old URL while the page is reloading.
+            throw new Error("Security Redirect: Reloading with ID card...");
         }
-    } catch (e) { console.error("Security Redirect Error", e); }
+    } catch (e) { 
+        // Ignore our intentional kill switch error, log others
+        if (e.message !== "Security Redirect: Reloading with ID card...") {
+            console.error("Security Patch Error", e);
+        } else {
+            // Re-throw to ensure execution stops
+            throw e;
+        }
+    }
 })();
 // ---------------------------------------------------------
 
