@@ -1,60 +1,44 @@
 // ---------------------------------------------------------
-// SECURITY PATCH: Strict Referrer Check (Anti-Copy/Paste)
+// SECURITY LOCK: STRICT REFERRER CHECK
 // ---------------------------------------------------------
 (function() {
     try {
-        const urlParams = new URLSearchParams(window.location.search);
-        let fileParam = urlParams.get('file');
+        // 1. CONFIGURATION: Who is allowed to open this?
+        const ALLOWED_HOSTS = [
+            "thedtl.org", 
+            "oclc.org", 
+            "libapps.com", 
+            "libguides.com", 
+            "springshare.com", 
+            "localhost"
+        ];
 
-        if (fileParam && fileParam.includes("workers.dev")) {
-            
-            // 1. Get the ACTUAL browser referrer (Who sent you?)
-            let browserRef = "";
-            if (document.referrer) {
-                try { browserRef = new URL(document.referrer).hostname; } catch(e) {}
-            } else if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
-                try { browserRef = new URL(window.location.ancestorOrigins[0]).hostname; } catch(e) {}
-            }
-            
-            // 2. Check what the URL *claims* the referrer is (The ID Card)
-            let urlClaimedRef = "";
-            const refMatch = fileParam.match(/&ref=([^&]*)/);
-            if (refMatch) {
-                urlClaimedRef = refMatch[1];
-            }
-
-            // 3. THE LIE DETECTOR
-            // If the URL has a valid ID card (e.g. thedtl.org) 
-            // BUT the browser says you came from nowhere (Direct/Empty)...
-            // Then you copied and pasted the link. BLOCKED.
-            if (urlClaimedRef && urlClaimedRef !== "direct" && !browserRef) {
-                
-                // Punishment: Overwrite the ID card with "direct"
-                const newFileParam = fileParam.replace(`&ref=${urlClaimedRef}`, "&ref=direct");
-                
-                urlParams.set('file', newFileParam);
-                const newUrl = window.location.pathname + '?' + urlParams.toString() + window.location.hash;
-                
-                // Force Reload to trigger the block
-                window.location.replace(newUrl);
-                throw new Error("Security Redirect: Detected copied link.");
-            }
-
-            // 4. STANDARD INJECTION (For legitimate first loads)
-            // If there is no ID card yet, create one based on the browser referrer
-            if (!fileParam.includes("&ref=")) {
-                let ref = browserRef || "direct";
-                const newFileParam = fileParam + "&ref=" + ref;
-                urlParams.set('file', newFileParam);
-                const newUrl = window.location.pathname + '?' + urlParams.toString() + window.location.hash;
-                
-                window.location.replace(newUrl);
-                throw new Error("Security Redirect: Injecting ID card...");
-            }
+        // 2. GET REFERRER
+        // We check document.referrer (Standard) and ancestorOrigins (Iframes in Chrome)
+        let referrer = document.referrer || "";
+        if (!referrer && window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+            referrer = window.location.ancestorOrigins[window.location.ancestorOrigins.length - 1];
         }
-    } catch (e) { 
-        if (!e.message.includes("Security Redirect")) console.error(e);
-        else throw e;
+        
+        // 3. CHECK
+        // If referrer is empty (Copy/Paste) -> isAllowed = false
+        // If referrer is google.com -> isAllowed = false
+        // If referrer is thedtl.org -> isAllowed = true
+        const isAllowed = ALLOWED_HOSTS.some(host => referrer.includes(host));
+
+        // 4. BLOCKING LOGIC
+        if (!isAllowed) {
+            // Nuke the page immediately
+            document.write('<div style="font-family:sans-serif;text-align:center;margin-top:50px;color:#d9534f;"><h1>Access Denied</h1><p>This document must be accessed via the Library website.</p></div>');
+            document.close(); 
+            window.stop();    
+            throw new Error("Access Denied: Invalid Referrer"); 
+        }
+    } catch (e) {
+        // Stop the rest of the PDF viewer from loading
+        if (e.message.includes("Access Denied")) {
+            throw e;
+        }
     }
 })();
 // ---------------------------------------------------------
