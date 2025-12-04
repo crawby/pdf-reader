@@ -21,15 +21,16 @@
         }
         
         // 3. CHECK
-        // If referrer is empty (Copy/Paste) -> isAllowed = false
-        // If referrer is google.com -> isAllowed = false
-        // If referrer is thedtl.org -> isAllowed = true
         const isAllowed = ALLOWED_HOSTS.some(host => referrer.includes(host));
 
         // 4. BLOCKING LOGIC
         if (!isAllowed) {
-            // Nuke the page immediately
-            document.write('<div style="font-family:sans-serif;text-align:center;margin-top:50px;color:#d9534f;"><h1>Access Denied</h1><p>This document must be accessed via the Library website.</p></div>');
+            // Prepare the display text for the referrer
+            const refDisplay = referrer || 'Hidden / Direct Link';
+
+            // Nuke the page immediately and show your custom error
+            document.write('<div style="font-family:sans-serif;text-align:center;margin-top:50px;color:#d9534f;"><h1>Access Denied</h1><p>This document must be accessed via the Library website.</p><p style="color:#666;font-size:12px;">(Referrer: ' + refDisplay + ')</p></div>');
+            
             document.close(); 
             window.stop();    
             throw new Error("Access Denied: Invalid Referrer"); 
