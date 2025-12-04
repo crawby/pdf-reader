@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// SECURITY LOCK: STRICT REFERRER CHECK
+// SECURITY LOCK: STRICT REFERRER CHECK (DOM REPLACEMENT)
 // ---------------------------------------------------------
 (function() {
     try {
@@ -14,7 +14,6 @@
         ];
 
         // 2. GET REFERRER
-        // We check document.referrer (Standard) and ancestorOrigins (Iframes in Chrome)
         let referrer = document.referrer || "";
         if (!referrer && window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
             referrer = window.location.ancestorOrigins[window.location.ancestorOrigins.length - 1];
@@ -25,18 +24,34 @@
 
         // 4. BLOCKING LOGIC
         if (!isAllowed) {
-            // Prepare the display text for the referrer
             const refDisplay = referrer || 'Hidden / Direct Link';
-
-            // Nuke the page immediately and show your custom error
-            document.write('<div style="font-family:sans-serif;text-align:center;margin-top:50px;color:#d9534f;"><h1>Access Denied</h1><p>This document must be accessed via the Library website.</p><p style="color:#666;font-size:12px;">(Referrer: ' + refDisplay + ')</p></div>');
             
-            document.close(); 
-            window.stop();    
+            // Create the error page HTML
+            const errorHtml = `
+                <head>
+                    <title>Access Denied</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                </head>
+                <body style="background-color: #fff; font-family: sans-serif; text-align: center; padding-top: 50px; margin: 0;">
+                    <div style="color: #d9534f;">
+                        <h1>Access Denied</h1>
+                        <p>This document must be accessed via the Library website.</p>
+                        <p style="color: #666; font-size: 12px;">(Referrer: ${refDisplay})</p>
+                    </div>
+                </body>
+            `;
+
+            // FORCE REPLACE THE ENTIRE PAGE
+            // This wipes out the PDF viewer HTML immediately
+            document.documentElement.innerHTML = errorHtml;
+            
+            // Stop network requests (kills the PDF download)
+            window.stop();
+            
+            // Kill JavaScript execution
             throw new Error("Access Denied: Invalid Referrer"); 
         }
     } catch (e) {
-        // Stop the rest of the PDF viewer from loading
         if (e.message.includes("Access Denied")) {
             throw e;
         }
