@@ -27,13 +27,28 @@ See https://github.com/adobe-type-tools/cmap-resources
     <meta name="google" content="notranslate">
     <title>PDF.js viewer</title>
 
-<!-- This snippet is used in production (included from viewer.html) -->
-<link rel="resource" type="application/l10n" href="locale/locale.properties">
-<script src="../build/pdf.js"></script>
-
+    <!-- This snippet is used in production (included from viewer.html) -->
+    <link rel="resource" type="application/l10n" href="locale/locale.properties">
+    <script src="../build/pdf.js"></script>
     <link rel="stylesheet" href="viewer.css">
+    <script src="viewer.js"></script>
 
-  <script src="viewer.js"></script>
+    <!-- LIBRARY CSS RESTRICTIONS -->
+    <style>
+      /* Hide Sidebar Toggle to prevent users seeing thumbnails of restricted pages */
+      #sidebarToggle, #viewThumbnail, #sidebarContainer {
+          display: none !important; 
+      }
+      
+      /* Double-check ensuring download/print/open are hidden */
+      #download, #secondaryDownload, 
+      #print, #secondaryPrint, 
+      #openFile, #secondaryOpenFile,
+      #editorModeButtons, #editorModeSeparator {
+          display: none !important;
+      }
+    </style>
+
   </head>
 
   <body tabindex="1">
@@ -273,7 +288,6 @@ See https://github.com/adobe-type-tools/cmap-resources
                   <span data-l10n-id="open_file_label">Open</span>
                 </button>
 
-                <!-- I FIXED THIS LINE FOR YOU: -->
                 <button id="print" hidden class="toolbarButton hiddenMediumView" title="Print" tabindex="32" data-l10n-id="print">
                   <span data-l10n-id="print_label">Print</span>
                 </button>
@@ -483,5 +497,63 @@ See https://github.com/adobe-type-tools/cmap-resources
     <div id="printContainer"></div>
 
     <input type="file" id="fileInput" class="hidden">
+
+    <!-- LIBRARY 20% RESTRICTION SCRIPT -->
+    <script type="text/javascript">
+      document.addEventListener("webviewerloaded", function() {
+          const app = window.PDFViewerApplication;
+
+          // Wait until the PDF structure is read and pages are ready
+          app.eventBus.on("pagesinit", function() {
+              // 1. Calculate the Limit
+              const totalRealPages = app.pdfDocument.numPages;
+              const pageLimit = Math.ceil(totalRealPages * 0.20); // 20% calculation
+
+              console.log(`Library Restriction: Locking at page ${pageLimit} of ${totalRealPages}`);
+
+              // 2. Override the "Total Pages" display in the toolbar
+              setTimeout(() => {
+                  app.pagesCount = pageLimit;
+                  const numPagesLabel = document.getElementById('numPages');
+                  if (numPagesLabel) {
+                      numPagesLabel.textContent = 'of ' + pageLimit;
+                  }
+              }, 500);
+
+              // 3. The Scroll Guard (Prevents navigation)
+              app.eventBus.on("pagechanging", function(evt) {
+                  if (evt.pageNumber > pageLimit) {
+                      // Force them back to the limit
+                      setTimeout(() => {
+                          app.page = pageLimit;
+                          // Optional: Alert the user
+                          // alert("This is a preview. Please request the chapter to read more.");
+                      }, 0);
+                  }
+              });
+
+              // 4. The Visual Blocker (Hides elements from the DOM if they try to hack/scroll)
+              const viewerContainer = document.getElementById('viewer');
+              if (viewerContainer) {
+                  const observer = new MutationObserver((mutations) => {
+                      mutations.forEach((mutation) => {
+                          mutation.addedNodes.forEach((node) => {
+                              if (node.nodeType === 1 && node.classList.contains('page')) {
+                                  const pageNum = parseInt(node.getAttribute('data-page-number'));
+                                  // If page > limit, hide it and remove content
+                                  if (pageNum > pageLimit) {
+                                      node.style.display = 'none';
+                                      node.style.visibility = 'hidden';
+                                      node.innerHTML = ""; 
+                                  }
+                              }
+                          });
+                      });
+                  });
+                  observer.observe(viewerContainer, { childList: true, subtree: true });
+              }
+          });
+      });
+    </script>
   </body>
 </html>
